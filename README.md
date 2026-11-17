@@ -1,17 +1,24 @@
 # AI IT Troubleshooting Assistant
 
-**AI-Powered IT Application Maintenance and Deployment Troubleshooting Assistant** is a desktop application built with Python 3.10+, PySide6 (Qt for Python), and SQLite. It helps software engineers, DevOps practitioners, and computer science students diagnose, analyze, and resolve complex application errors encountered during **Application Maintenance** and **Application Deployment**.
+**AI-Powered IT Application Maintenance and Deployment Troubleshooting Assistant** (Window title: `"AI IT Troubleshooting Assistant"`) is a high-performance native desktop application built with Python 3.10+, PySide6 (Qt for Python), and SQLite. It helps software engineers, DevOps practitioners, and computer science students diagnose, analyze, and resolve complex application errors encountered during **Application Maintenance** and **Application Deployment**.
 
 ---
 
 ## 🌟 Key Features
 
 1. **Dual Problem Domain Coverage:**
-   - **Application Maintenance:** Troubleshoot syntax errors, runtime exceptions, logic bugs, ORM/database issues, and code-level defects in existing applications.
-   - **Application Deployment:** Diagnose container crashes, Dockerfile build failures, missing runtime dependencies, port conflicts (`EADDRINUSE`), and cloud environment discrepancies.
+   - **Application Maintenance:** Troubleshoot syntax errors, runtime exceptions, logic bugs, ORM/database issues, memory violations (SIGSEGV), and code-level defects in existing applications.
+   - **Application Deployment:** Diagnose container crashes, Dockerfile build failures, missing runtime dependencies, port conflicts (`EADDRINUSE`), linker/CMake failures, and cloud environment discrepancies.
    - **Automatic Detection:** Automatically infers whether a pasted log indicates an internal maintenance problem or an environment/deployment failure.
 
-2. **Strict Multi-Section Diagnostic Breakdown:**
+2. **Five Supported Programming Languages:**
+   - **Python:** Tracebacks, ModuleNotFoundError, virtual environments, Django/Flask/FastAPI.
+   - **Java:** NullPointerException, classpath, Spring Boot, Maven/Gradle.
+   - **JavaScript:** EADDRINUSE, Node.js cluster, Express, npm/yarn.
+   - **C:** Segmentation faults, memory pointers, GCC/Clang, GDB, Valgrind, Makefiles.
+   - **C++:** CMake linking errors, undefined references, AddressSanitizer (`-fsanitize=address`), smart pointers.
+
+3. **Strict Multi-Section Diagnostic Breakdown:**
    Every diagnosis delivers 10 structured sections:
    1. Error Summary
    2. Programming Language
@@ -19,32 +26,35 @@
    4. Error Category (1 of 10 canonical categories: *Syntax Error, Runtime Error, Logical Error, Dependency Error, Configuration Error, Database Error, Network Error, Permission Error, Build Error, Deployment Error*)
    5. Severity Level (*Low, Medium, High, Critical*)
    6. Beginner-Friendly Explanation of the Error
-   7. **Confirmed Facts vs. Possible Hypotheses:** Rigorously separates what is directly confirmed in the logs from ranked potential causes.
+   7. **Confirmed Facts vs. Possible Causes (Hypotheses):** Rigorously separates what is directly confirmed in the logs from ranked potential causes.
    8. Ordered Step-by-Step Troubleshooting Instructions
    9. Suggested Concrete Solution with code/configuration snippets
    10. Verification Steps to confirm the problem is resolved
 
-3. **Client-Side Security & Privacy Redaction:**
+4. **Multi-Format Export & Sharing:**
+   - **Standalone Styled HTML Report:** Clean, responsive, self-contained HTML document ready for printing or emailing.
+   - **Markdown Report:** Clean GitHub-flavored Markdown for Jira, GitHub Issues, or Slack.
+   - **JSON Session Backup & Import:** Complete session serialization allowing team members to import and inspect past troubleshooting sessions without internet or API calls.
+
+5. **Client-Side Security & Privacy Redaction:**
    - Automatically detects and redacts sensitive data (API keys, JWT tokens, AWS credentials, database passwords, authorization headers, private key blocks) before sending logs to an external AI provider.
    - Displays an explicit privacy confirmation dialog prior to any external API transmission.
    - Stores only redacted logs in the local database.
 
-4. **Multi-Provider AI Abstraction & Built-In Demo Mode:**
-   - **Google Gemini:** High-speed, high-accuracy analysis powered by `gemini-2.5-flash` via the `google-genai` SDK.
+6. **Multi-Provider AI Abstraction & Built-In Demo Mode:**
+   - **Google Gemini:** High-speed, high-accuracy analysis powered by `gemini-2.5-flash` via the official `google-genai` SDK.
    - **OpenAI:** Powered by `gpt-4o-mini` (or user-chosen model) via the `openai` SDK.
    - **Demo Mode:** Fully offline, deterministic simulation mode tailored for college demonstrations, offline presentations, or testing when no API key is available.
 
-5. **Persistent History & Searchable Database:**
+7. **Persistent History & Searchable Database:**
    - Built with SQLite using parameterized queries for complete injection protection.
    - Multi-filter search (search bar, language filter, problem type filter, status filter).
    - Instant full-session viewer without re-calling the AI API.
-   - Export session diagnostics as clean Markdown reports.
    - One-click status management (*Unresolved*, *In Progress*, *Solved*).
 
-6. **Modern, Responsive Native UI:**
-   - Built on PySide6 with custom Qt Style Sheets (QSS).
-   - Deep navy sidebar, rounded cards, high-contrast badges, and custom scrollbars.
-   - Completely non-blocking background workers (`QThread`) ensure the user interface never freezes during requests.
+8. **Dual Execution Modes (Native GUI & CLI):**
+   - **PySide6 Native Desktop GUI:** Rich, responsive window with dark navy developer theme.
+   - **Headless CLI Runner:** Run fast diagnostics directly inside the Antigravity IDE terminal without launching the GUI (`python main.py --cli --file sample.log`).
 
 ---
 
@@ -52,12 +62,26 @@
 
 ```
 AI_IT_Troubleshooting_Assistant/
-├── main.py                     # Application entry point, QSS loader, global exception handler
+├── main.py                     # Entry point supporting native PySide6 desktop GUI & CLI runner
 ├── requirements.txt            # Python dependencies with pinned versions
-├── README.md                   # Complete developer and user documentation
+├── README.md                   # Comprehensive documentation
 ├── .env.example                # Example environment variable template
 ├── .gitignore                  # Git ignore rules for venv, caches, and secrets
 ├── AI_IT_Troubleshooting_Assistant.spec # PyInstaller Windows packaging specification
+├── run.bat / run.ps1           # 1-click execution scripts for Antigravity IDE terminal
+├── test.bat / test.ps1         # 1-click test scripts for Antigravity IDE terminal
+│
+├── .agents/
+│   └── rules/
+│       └── troubleshooting-rules.md # Antigravity IDE workspace-scoped agent rules
+│
+├── sample_logs/                # Demonstration logs for all 5 languages
+│   ├── python_django_db_failure.log
+│   ├── python_docker_port_bind.log
+│   ├── java_spring_nullpointer.log
+│   ├── javascript_node_eaddrinuse.log
+│   ├── cpp_segfault_core_dump.log
+│   └── cpp_cmake_missing_library.log
 │
 ├── config/
 │   ├── __init__.py
@@ -66,11 +90,11 @@ AI_IT_Troubleshooting_Assistant/
 ├── database/
 │   ├── __init__.py
 │   ├── schema.py               # SQLite schema definition and indexing
-│   └── db_manager.py           # Thread-safe database manager with parameterized queries
+│   └── db_manager.py           # Thread-safe database manager with parameterized queries & JSON I/O
 │
 ├── modules/
 │   ├── __init__.py
-│   ├── languages.py            # Extensible language profiles (Python, Java, JavaScript)
+│   ├── languages.py            # Extensible language profiles (Python, Java, JavaScript, C, C++)
 │   ├── maintenance.py          # Application Maintenance domain context & validation
 │   └── deployment.py           # Application Deployment domain context & validation
 │
@@ -81,6 +105,7 @@ AI_IT_Troubleshooting_Assistant/
 ├── services/
 │   ├── __init__.py
 │   ├── ai_service.py           # AIProvider base class, Gemini/OpenAI implementations, DemoProvider
+│   ├── cli_runner.py           # Headless CLI runner for terminal troubleshooting
 │   ├── error_classifier.py     # Canonical category and severity normalizer & heuristic fallback
 │   ├── log_processor.py        # File validation, normalization, secret redaction, truncation
 │   └── workers.py              # Background QThread worker for responsive UI
@@ -90,13 +115,13 @@ AI_IT_Troubleshooting_Assistant/
 │   ├── main_window.py          # Main QMainWindow, left sidebar, stacked navigation, API settings dialog
 │   ├── dashboard.py            # Screen 1: Dashboard with metric cards, quick actions, recent sessions
 │   ├── new_troubleshooting.py  # Screen 2: Input form, log uploader, privacy dialog, analysis trigger
-│   ├── analysis_screen.py      # Screen 3: 10-section diagnostic report, markdown export, status updater
-│   ├── history_screen.py       # Screen 4: Searchable table, combined filters, detail dialog, deletion
+│   ├── analysis_screen.py      # Screen 3: 10-section diagnostic report, HTML/MD/JSON export, status updater
+│   ├── history_screen.py       # Screen 4: Searchable table, combined filters, detail dialog, JSON import
 │   ├── widgets.py              # Reusable cards, badges, loading overlay, stat cards
-│   └── styles.qss              # Custom Qt Style Sheet
+│   └── styles.qss              # Custom Qt Style Sheet (Dark navy developer palette)
 │
 ├── assets/
-│   └── icons/                  # Local SVG icons for offline operation (dashboard, settings, etc.)
+│   └── icons/                  # Local SVG & ICO icons for offline operation (dashboard, settings, etc.)
 │
 └── tests/
     ├── __init__.py
@@ -105,215 +130,120 @@ AI_IT_Troubleshooting_Assistant/
     ├── test_classifier.py      # Normalization and heuristic classification tests
     ├── test_ai_service.py      # JSON parsing, error mapping, DemoProvider tests
     ├── test_gui.py             # PySide6 offscreen GUI and navigation tests
-    └── test_workflow.py        # End-to-end diagnosis and persistence integration tests
+    ├── test_workflow.py        # End-to-end diagnosis and persistence integration tests
+    ├── test_cpp_support.py     # C and C++ profiles, signal extraction, and JSON import/export tests
+    └── test_cli.py             # CLI runner parser, formatting, and headless workflow tests
 ```
 
 ---
 
-## 🚀 Getting Started
+## ⚡ How to Open and Work in Antigravity IDE (NOT VS Code)
 
-### 1. Prerequisites
-- **Python 3.10+** (Python 3.10, 3.11, 3.12, or 3.13)
-- Windows 10/11 (or macOS / Linux)
+Antigravity IDE is the dedicated AI-first developer environment. Follow these exact steps to open and use the project in Antigravity IDE:
 
-### 2. Installation Steps
-
-1. **Clone or navigate to the repository:**
-   ```bash
-   cd AI_IT_Troubleshooting_Assistant
+### 1. Open the Project Folder in Antigravity IDE
+1. Launch **Antigravity IDE**.
+2. Go to the top menu bar and select **File > Open Folder...** (or press `Ctrl + K, Ctrl + O`).
+3. Browse to and select the project directory:
    ```
-
-2. **Create and activate a virtual environment:**
-   - **Windows (PowerShell):**
-     ```powershell
-     python -m venv venv
-     .\venv\Scripts\Activate.ps1
-     ```
-   - **Windows (CMD):**
-     ```cmd
-     python -m venv venv
-     .\venv\Scripts\activate.bat
-     ```
-   - **macOS / Linux:**
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
+   C:\Users\shiri\.gemini\antigravity\scratch\AI_IT_Troubleshooting_Assistant
    ```
+   *(Alternatively, in Antigravity's left sidebar, click the **Projects** icon and choose this folder).*
+4. Antigravity IDE will load the workspace. You will see all files, folders, and `.agents/rules/` directly in the Explorer tree.
 
-### 3. Configuring Your AI API Key (Optional)
+### 2. Open the Antigravity Integrated Terminal
+1. Press `Ctrl + ~` (tilde) or go to the top menu and select **Terminal > New Terminal**.
+2. A PowerShell terminal will open directly inside the project root directory.
 
-You can run the application with **Gemini**, **OpenAI**, or in **Demo Mode**.
+### 3. Run the Native Desktop Application
+In the Antigravity terminal, run:
+```powershell
+python main.py
+```
+*(Or simply run `.\run.ps1` or `run.bat`)*
 
-#### Option A: In-App Settings Dialog (Recommended)
+The native dark-themed PySide6 desktop window titled **"AI IT Troubleshooting Assistant"** will open immediately!
+
+### 4. Run Fast Headless Diagnostics in Antigravity Terminal (CLI Mode)
+If you want to diagnose an error log directly from your terminal inside Antigravity IDE without launching the GUI:
+```powershell
+python main.py --cli --file sample_logs/python_docker_port_bind.log
+```
+Or for a C++ memory segmentation fault with automatic report export:
+```powershell
+python main.py --cli --file sample_logs/cpp_segfault_core_dump.log --export memory_report.md
+```
+
+### 5. Run the Automated Test Suite
+In the Antigravity integrated terminal, execute:
+```powershell
+python -m pytest -v
+```
+*(Or run `.\test.ps1`)*
+
+All **44 automated tests** across 8 test suites will execute and pass in ~2 seconds.
+
+### 6. Using Antigravity AI Features with This Project
+- **Agent Chat & Sidebar**: In Antigravity's chat panel, you can type `@` to mention project files (e.g. `@main.py`, `@services/ai_service.py`, `@ui/new_troubleshooting.py`) to ask questions or review code.
+- **Inline AI Code Editing**: Highlight any function or block and press `Ctrl + I` to refactor, explain, or add features with AI assistance.
+- **Workspace Rules**: Antigravity IDE automatically reads `.agents/rules/troubleshooting-rules.md`, ensuring all agent interactions adhere to our project architecture and security rules.
+
+---
+
+## 🔑 AI Provider Configuration
+
+You can run the application with **Google Gemini**, **OpenAI**, or offline in **Demo Mode**.
+
+### Option A: In-App Settings Dialog (Recommended)
 Launch the application and click **⚙️ API Settings** at the bottom of the left sidebar. Select your provider and paste your key. Your credentials will be saved locally in your user profile.
 
-#### Option B: `.env` File
+### Option B: `.env` File
 Create a `.env` file from `.env.example`:
 ```powershell
 Copy-Item .env.example .env
 ```
-Open `.env` in any text editor and fill in your key:
+Fill in your API key:
 ```env
 # Choose: gemini, openai, or demo
 AI_PROVIDER=gemini
-
-# For Google Gemini (Free tier available):
-# Obtain at: https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=AIzaSyYourGeminiApiKeyHere
 
-# For OpenAI:
-# Obtain at: https://platform.openai.com/api-keys
+# Or for OpenAI:
 OPENAI_API_KEY=sk-proj-YourOpenAIApiKeyHere
 ```
 
-#### Option C: Demo Mode (No API Key Required)
-If you do not have an API key, switch the provider to **Demo Mode** in the in-app Settings dialog or run with `AI_PROVIDER=demo`. The application will provide realistic, context-aware diagnostic demonstrations offline.
+### Option C: Demo Mode (Offline / No Key Required)
+Select **Demo Mode** in the in-app Settings dialog or set `AI_PROVIDER=demo`. The assistant will generate rich, realistic, context-aware diagnostic demonstrations locally without making any external network requests.
 
 ---
 
-## 🖥️ Running the Application
+## 📦 Standalone Executable (Windows)
 
-Launch the desktop application:
-```bash
-python main.py
+The application has been compiled with PyInstaller into a standalone Windows binary that runs on any modern Windows machine without requiring Python:
+
+```powershell
+.\dist\AI_IT_Troubleshooting_Assistant\AI_IT_Troubleshooting_Assistant.exe
 ```
 
-The native desktop window will open with the title **"AI IT Troubleshooting Assistant"**.
-
----
-
-## 🧪 Running Automated Tests
-
-Run the complete test suite using pytest:
-```bash
-pytest -v
-```
-
-All 35 automated unit, GUI, and integration tests will execute and verify database operations, log redaction patterns, JSON parsing, error classifiers, and UI navigation.
-
----
-
-## 🎓 College Presentation & Demonstration Guide
-
-### Demo Scenario 1: Application Deployment (Docker Missing Dependency)
-1. Launch the app and click **Application Deployment** on the Dashboard.
-2. Select:
-   - **Language:** `Python`
-   - **Problem Type:** `Deployment` (preselected)
-   - **Target Environment:** `Docker`
-   - **Application / Framework:** `Flask`
-3. Paste the following error into the text area:
-   ```
-   web_1  | Traceback (most recent call last):
-   web_1  |   File "/app/server.py", line 3, in <module>
-   web_1  |     import flask
-   web_1  | ModuleNotFoundError: No module named 'flask'
-   ```
-4. Click **⚡ Analyze Problem**.
-5. Observe:
-   - Category is classified as **Dependency Error** with **High** severity.
-   - Clear distinction between confirmed facts (ModuleNotFoundError visible) and possible hypotheses (missing in `requirements.txt` vs. Dockerfile build caching).
-   - Concrete, ordered Docker commands provided for remediation.
-   - Click **✓ Mark as Resolved** to record the resolution in the persistent database.
-
-### Demo Scenario 2: Application Maintenance (Authentication Exception)
-1. Click **Application Maintenance** on the Dashboard.
-2. Select:
-   - **Language:** `Python`
-   - **Problem Type:** `Maintenance`
-   - **Target Environment:** `Development`
-3. Paste the following runtime error:
-   ```
-   [ERROR] Exception on /api/login [POST]
-   Traceback (most recent call last):
-     File "/app/auth.py", line 42, in login
-       if not verify_password(password, user.password_hash):
-   AttributeError: 'NoneType' object has no attribute 'password_hash'
-   ```
-4. Click **⚡ Analyze Problem**.
-5. Observe:
-   - Category is classified as **Runtime Error**.
-   - Explanation highlights that the database query returned `None` when looking up the user, causing an unhandled attribute access.
-   - Solution suggests defensive null checks before verifying credentials.
-
-### Demo Scenario 3: Secret Redaction Verification
-1. Paste an error log containing dummy sensitive data:
-   ```
-   Database connection failed: postgresql://admin:MySecretPass123@db:5432/app
-   API Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.doNotShareThisSecretToken
-   ```
-2. Click **⚡ Analyze Problem**.
-3. In Screen 3, scroll to the **Original Error / Log Data** section at the bottom.
-4. Verify that passwords and tokens are replaced with `[REDACTED_PASSWORD]` and `[REDACTED_BEARER_TOKEN]`.
-
----
-
-## 📦 Packaging as a Windows Executable (.exe)
-
-You can package the application into a standalone Windows executable using PyInstaller:
-
+To recompile the binary after making modifications:
 ```powershell
 pyinstaller AI_IT_Troubleshooting_Assistant.spec --noconfirm
 ```
 
-The output bundle will be located in:
-```
-dist/AI_IT_Troubleshooting_Assistant/AI_IT_Troubleshooting_Assistant.exe
-```
-
-### Providing API Keys to the Packaged `.exe`
-When sharing the executable:
-1. Users do **not** need to install Python.
-2. Users can supply their API key by opening the application, clicking **⚙️ API Settings**, and typing their key (or placing a `.env` file in the same directory as the executable).
-3. The executable will store user settings and SQLite history in `%APPDATA%\AI_IT_Troubleshooting_Assistant\`.
-
 ---
 
-## 🔌 How to Add New Language Profiles (e.g., C / C++)
+## 📋 Demonstration Guide
 
-The architecture is modular and uses language profiles. To add C or C++ support:
-
-1. Open `modules/languages.py`.
-2. Define a new `LanguageProfile`:
-   ```python
-   CPP_PROFILE = LanguageProfile(
-       name="C++",
-       display_name="C / C++",
-       file_extensions=[".c", ".cpp", ".cc", ".h", ".hpp"],
-       common_exceptions=[
-           "Segmentation fault (core dumped)",
-           "SIGSEGV",
-           "undefined reference to",
-           "fatal error: ... no such file or directory",
-           "double free or corruption",
-           "CMake Error",
-       ],
-       dependency_files=["CMakeLists.txt", "Makefile", "conanfile.txt", "vcpkg.json"],
-       common_frameworks=["Boost", "Qt", "Catch2", "GoogleTest"],
-       build_and_run_tools=["gcc", "g++", "clang", "cmake", "make", "ninja", "gdb", "valgrind"],
-       troubleshooting_guidance=[
-           "Inspect memory boundaries with Valgrind or AddressSanitizer (-fsanitize=address).",
-           "Verify header include paths (-I flags) and linked library paths (-L and -l flags).",
-           "Check CMake target_link_libraries for missing definitions causing linker errors.",
-       ],
-   )
-   ```
-3. Register the profile in `modules/languages.py`:
-   ```python
-   register_language_profile(CPP_PROFILE)
-   ```
-4. That's it! The dropdown on Screen 2, the filter on Screen 4, and the prompt injection automatically adopt the new language without touching the core engine.
-
----
-
-## 🔒 Security Summary
-
-- **Zero Arbitrary Execution:** Uploaded log files and user inputs are strictly read as text. No user input or AI suggestion is ever executed, evaluated (`eval`/`exec`), or passed to system shells.
-- **Client-Side Secret Redaction:** Common credentials (API keys, passwords, bearer tokens, private keys) are scrubbed before sending data over the network.
-- **SQL Injection Defense:** All SQLite interactions use parameterized queries (`?` placeholders) with strict column whitelisting for sort operations.
-- **Safe Persistence:** Keys are kept in user-local directories or environment variables and are excluded from Git via `.gitignore`.
+To test or demonstrate the application using real error logs:
+1. Open the app (`python main.py`).
+2. On Screen 1 (Dashboard), click **Application Maintenance** or **Application Deployment**.
+3. On Screen 2, click **Upload Log File** and choose one of the pre-made sample logs in `sample_logs/`:
+   - `python_django_db_failure.log` -> Tests Maintenance / Database Error
+   - `python_docker_port_bind.log` -> Tests Deployment / EADDRINUSE Docker Error
+   - `java_spring_nullpointer.log` -> Tests Maintenance / NullPointerException
+   - `javascript_node_eaddrinuse.log` -> Tests Deployment / Express EADDRINUSE
+   - `cpp_segfault_core_dump.log` -> Tests Maintenance / C++ Memory SIGSEGV
+   - `cpp_cmake_missing_library.log` -> Tests Deployment / Linker Build Error
+4. Click **Analyze Problem**.
+5. On Screen 3 (AI Analysis), review the 10 diagnostic sections, switch the status to *In Progress* or *Solved*, and click **Export Report** to generate a styled HTML or Markdown report.
+6. Open Screen 4 (History) to search, filter, and inspect past sessions.

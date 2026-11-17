@@ -1,0 +1,3 @@
+@echo off
+echo Starting AI IT Troubleshooting Assistant in Antigravity IDE...
+python main.py %*

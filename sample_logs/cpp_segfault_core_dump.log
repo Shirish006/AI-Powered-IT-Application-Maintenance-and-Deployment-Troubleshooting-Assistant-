@@ -1,0 +1,13 @@
+[2026-11-17 16:05:12] Starting native packet processor daemon (PID: 48921)
+[2026-11-17 16:05:12] Initializing ring buffer with capacity 1048576...
+[2026-11-17 16:05:13] Ingesting telemetry frame seq=14982 len=256
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff7bc8e12 in PacketParser::deserialize_payload (this=0x0, buffer=0x7fffffffd430, size=256) at src/parser.cpp:89
+89	    this->active_stream_id = buffer[4] | (buffer[5] << 8);
+(gdb) bt
+#0  0x00007ffff7bc8e12 in PacketParser::deserialize_payload (this=0x0, buffer=0x7fffffffd430, size=256) at src/parser.cpp:89
+#1  0x0000555555556204 in WorkerThread::process_incoming (this=0x7fffffffe000) at src/worker.cpp:142
+#2  0x00007ffff7a02ac3 in execute_native_thread_routine () from /usr/lib/x86_64-linux-gnu/libstdc++.so.6
+#3  0x00007ffff7894609 in start_thread (arg=<optimized out>) at pthread_create.c:477
+#4  0x00007ffff77b9293 in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:95
+Segmentation fault (core dumped)

@@ -58,12 +58,12 @@ class DemoProvider(AIProvider):
 
     def analyze(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Generate high-quality context-aware troubleshooting analysis without an external API."""
-        language = payload.get("language", "Python")
+        language = payload.get("programming_language") or payload.get("language", "Python")
         problem_type = payload.get("problem_type", "Automatic Detection")
         environment = payload.get("environment", "Development")
-        framework = payload.get("framework", "")
+        framework = payload.get("application_framework") or payload.get("framework", "")
         error_log = payload.get("error_log", "")
-        signals = payload.get("signals", {})
+        signals = payload.get("extracted_signals") or payload.get("signals", {})
 
         # Context-aware logic for demo mode
         is_docker = "docker" in environment.lower() or "docker" in error_log.lower()
@@ -312,12 +312,12 @@ class GeminiProvider(AIProvider):
             raise AIProviderError("google-genai library is not installed.")
 
         user_prompt = build_user_prompt(
-            language=payload.get("language", "Python"),
+            language=payload.get("programming_language") or payload.get("language", "Python"),
             problem_type=payload.get("problem_type", "Automatic Detection"),
             environment=payload.get("environment", "Development"),
-            framework=payload.get("framework", ""),
+            framework=payload.get("application_framework") or payload.get("framework", ""),
             redacted_log=payload.get("error_log", ""),
-            signals=payload.get("signals", {}),
+            signals=payload.get("extracted_signals") or payload.get("signals", {}),
         )
 
         try:
@@ -365,12 +365,12 @@ class OpenAIProvider(AIProvider):
             raise AIProviderError("openai library is not installed.")
 
         user_prompt = build_user_prompt(
-            language=payload.get("language", "Python"),
+            language=payload.get("programming_language") or payload.get("language", "Python"),
             problem_type=payload.get("problem_type", "Automatic Detection"),
             environment=payload.get("environment", "Development"),
-            framework=payload.get("framework", ""),
+            framework=payload.get("application_framework") or payload.get("framework", ""),
             redacted_log=payload.get("error_log", ""),
-            signals=payload.get("signals", {}),
+            signals=payload.get("extracted_signals") or payload.get("signals", {}),
         )
 
         try:

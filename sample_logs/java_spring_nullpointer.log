@@ -1,0 +1,10 @@
+2026-11-17 14:22:01.340 ERROR 18492 --- [nio-8080-exec-4] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: java.lang.NullPointerException: Cannot invoke "com.enterprise.billing.CustomerAccount.getBalance()" because "account" is null] with root cause
+
+java.lang.NullPointerException: Cannot invoke "com.enterprise.billing.CustomerAccount.getBalance()" because "account" is null
+	at com.enterprise.billing.service.InvoiceService.generateInvoice(InvoiceService.java:84)
+	at com.enterprise.billing.controller.BillingController.createBillingCycle(BillingController.java:52)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:205)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:150)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)

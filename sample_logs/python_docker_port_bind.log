@@ -1,0 +1,15 @@
+[2026-11-17 10:14:02] INFO: Starting Docker container deployment for service 'web-api'...
+[2026-11-17 10:14:03] INFO: Building container image from Dockerfile.prod
+Step 1/8 : FROM python:3.11-slim
+Step 2/8 : WORKDIR /app
+Step 3/8 : COPY requirements.txt .
+Step 4/8 : RUN pip install --no-cache-dir -r requirements.txt
+Step 5/8 : COPY . .
+Step 6/8 : EXPOSE 5000
+Step 7/8 : ENV FLASK_APP=app.py
+Step 8/8 : CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+Successfully built 4f981ac82c1b
+Successfully tagged web-api:v1.4.2
+[2026-11-17 10:14:15] INFO: Starting container container_id=a82f349b1...
+docker: Error response from daemon: driver failed programming external connectivity on endpoint web-api (199f7d6a...): Error starting userland proxy: listen tcp4 0.0.0.0:5000: bind: address already in use.
+[2026-11-17 10:14:16] ERROR: Deployment failed during container launch phase.

@@ -8,6 +8,7 @@ block_cipher = None
 datas = [
     ('ui/styles.qss', 'ui'),
     ('assets/icons', 'assets/icons'),
+    ('sample_logs', 'sample_logs'),
 ]
 
 hiddenimports = [

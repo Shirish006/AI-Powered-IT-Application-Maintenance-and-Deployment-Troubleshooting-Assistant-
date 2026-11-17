@@ -1,0 +1,23 @@
+[pm2:deploy] Executing deployment lifecycle for express-gateway
+[pm2:deploy] Installing dependencies with npm ci...
+[pm2:deploy] Launching worker processes in cluster mode...
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:1740:16)
+    at listenInCluster (node:net:1788:12)
+    at Server.listen (node:net:1876:7)
+    at Function.listen (/var/www/app/node_modules/express/lib/application.js:635:24)
+    at Object.<anonymous> (/var/www/app/src/server.js:48:5)
+    at Module._compile (node:internal/modules/cjs/loader:1256:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1767:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
