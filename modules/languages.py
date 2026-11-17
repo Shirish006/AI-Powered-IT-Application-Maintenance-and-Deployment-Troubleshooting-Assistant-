@@ -112,11 +112,66 @@ JAVASCRIPT_PROFILE = LanguageProfile(
     ],
 )
 
+C_PROFILE = LanguageProfile(
+    name="C",
+    display_name="C",
+    file_extensions=[".c", ".h"],
+    common_exceptions=[
+        "Segmentation fault (core dumped)",
+        "SIGSEGV",
+        "SIGABRT",
+        "SIGBUS",
+        "undefined reference to",
+        "fatal error: ... No such file or directory",
+        "implicit declaration of function",
+        "assignment to expression with array type",
+        "dereferencing pointer to incomplete type",
+    ],
+    dependency_files=["Makefile", "CMakeLists.txt", "conanfile.txt", "vcpkg.json"],
+    common_frameworks=["POSIX", "GLib", "OpenSSL", "libcurl", "SQLite3"],
+    build_and_run_tools=["gcc", "clang", "make", "cmake", "gdb", "valgrind", "lldb"],
+    troubleshooting_guidance=[
+        "Compile with debugging symbols (-g) and run under Valgrind (valgrind --leak-check=full ./app) or GDB (gdb ./app).",
+        "Enable AddressSanitizer with -fsanitize=address,undefined for instant memory corruption detection.",
+        "Check pointer initialization and verify buffer boundaries to prevent memory overflows.",
+        "Verify header search paths (-I/path/to/include) and linked libraries (-L/path/to/lib -lname).",
+    ],
+)
+
+CPP_PROFILE = LanguageProfile(
+    name="C++",
+    display_name="C++",
+    file_extensions=[".cpp", ".cxx", ".cc", ".hpp", ".hxx", ".h"],
+    common_exceptions=[
+        "std::out_of_range",
+        "std::bad_alloc",
+        "std::bad_cast",
+        "Segmentation fault (core dumped)",
+        "SIGSEGV",
+        "undefined reference to",
+        "fatal error: ... No such file or directory",
+        "no matching function for call to",
+        "CMake Error at CMakeLists.txt",
+        "double free or corruption",
+    ],
+    dependency_files=["CMakeLists.txt", "Makefile", "conanfile.py", "conanfile.txt", "vcpkg.json"],
+    common_frameworks=["Boost", "Qt", "Catch2", "GoogleTest", "fmt", "nlohmann/json"],
+    build_and_run_tools=["g++", "clang++", "cmake", "make", "ninja", "ctest", "gdb", "valgrind"],
+    troubleshooting_guidance=[
+        "Inspect template errors carefully: focus on the first compiler diagnostic before cascade messages.",
+        "Check target_link_libraries in CMakeLists.txt for missing linker symbols causing undefined reference.",
+        "Use smart pointers (std::unique_ptr, std::shared_ptr) instead of raw pointers to eliminate double free bugs.",
+        "Compile with -Wall -Wextra -Wpedantic -fsanitize=address to catch undefined behavior early.",
+    ],
+)
+
 # Registry for profiles
 _PROFILE_REGISTRY: Dict[str, LanguageProfile] = {
     "python": PYTHON_PROFILE,
     "java": JAVA_PROFILE,
     "javascript": JAVASCRIPT_PROFILE,
+    "c": C_PROFILE,
+    "c++": CPP_PROFILE,
 }
 
 

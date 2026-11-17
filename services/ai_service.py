@@ -72,14 +72,93 @@ class DemoProvider(AIProvider):
         )
         is_db = "database" in error_log.lower() or "sql" in error_log.lower() or "connection refused" in error_log.lower()
         is_login = "login" in error_log.lower() or "auth" in error_log.lower()
+        is_cpp = language.lower() in ("c", "c++") or "sigsegv" in error_log.lower() or "segmentation fault" in error_log.lower()
 
         # Determine problem type if automatic
         if problem_type == "Automatic Detection":
-            detected_type = "Deployment" if (is_docker or is_missing_flask or "deploy" in error_log.lower()) else "Maintenance"
+            if is_docker or is_missing_flask or "deploy" in error_log.lower() or "cmake error" in error_log.lower():
+                detected_type = "Deployment"
+            else:
+                detected_type = "Maintenance"
         else:
             detected_type = ErrorClassifier.normalize_problem_type(problem_type)
 
-        if is_missing_flask and (is_docker or detected_type == "Deployment"):
+        if is_cpp and ("segmentation fault" in error_log.lower() or "sigsegv" in error_log.lower()):
+            category = "Runtime Error"
+            severity = "Critical"
+            summary = "SIGSEGV: Segmentation fault (core dumped) in memory pointer dereference"
+            reasoning = "Critical memory access violation within compiled native application code."
+            explanation = (
+                f"The {language} application crashed with a Segmentation Fault (SIGSEGV). This occurs when a thread attempts "
+                "to read or write an unallocated, protected, or already-freed virtual memory address (such as dereferencing a NULL pointer, "
+                "exceeding an array boundary, or accessing an object after calling free/delete)."
+            )
+            confirmed_facts = [
+                "Process terminated abnormally with SIGSEGV (signal 11).",
+                f"Programming language: {language}.",
+                "Core dump generated or fatal segmentation fault reported by kernel.",
+            ]
+            possible_causes = [
+                "Dereferencing a NULL or uninitialized pointer.",
+                "Buffer overrun writing past allocated heap/stack array bounds.",
+                "Use-after-free (accessing memory after free() or delete).",
+                "Stack overflow from excessive recursion or large stack-allocated arrays.",
+            ]
+            troubleshooting_steps = [
+                "1. Recompile with debug symbols and AddressSanitizer: gcc/g++ -g -fsanitize=address,undefined -O1 main.cpp -o app",
+                "2. Run under GDB to locate the exact crashing line: gdb ./app -> run -> backtrace (bt)",
+                "3. Alternatively run under Valgrind: valgrind --leak-check=full --track-origins=yes ./app",
+                "4. Check all pointers for NULL before dereferencing, and replace raw pointers with smart pointers (std::unique_ptr).",
+            ]
+            suggested_solution = (
+                "// Replace unsafe raw pointer dereference with null check or smart pointer:\n"
+                "if (ptr != nullptr) {\n"
+                "    ptr->execute();\n"
+                "} else {\n"
+                "    // Handle null state gracefully\n"
+                "    std::cerr << \"Warning: Pointer is null!\" << std::endl;\n"
+                "}"
+            )
+            verification_steps = [
+                "Compile with -fsanitize=address and execute with test inputs.",
+                "Confirm AddressSanitizer reports no heap-use-after-free or null-dereference errors.",
+                "Run test suite through Valgrind to ensure 0 memory leaks and clean exit code 0.",
+            ]
+        elif is_cpp and ("undefined reference" in error_log.lower() or "cmake" in error_log.lower()):
+            category = "Build Error"
+            severity = "High"
+            summary = f"Linker / CMake build error: Undefined reference or unresolved external symbol in {language}"
+            reasoning = "Build pipeline failed during linking or configuration generation phase."
+            explanation = (
+                f"The compiler was able to find the declarations (headers), but the linker (ld) could not locate the "
+                "compiled object definitions or external library archives required to produce the final executable."
+            )
+            confirmed_facts = [
+                "Linker failed to resolve referenced function or symbol.",
+                f"Build system: CMake / Make with {language}.",
+            ]
+            possible_causes = [
+                "The source file implementing the function was omitted from CMakeLists.txt add_executable/add_library.",
+                "Missing library in target_link_libraries (e.g. -lpthread, -lssl, -lsqlite3).",
+                "C++ name mangling mismatch when linking C code without extern \"C\" wrappers.",
+            ]
+            troubleshooting_steps = [
+                "1. Check CMakeLists.txt to verify all .cpp/.c files are listed in add_executable().",
+                "2. Add the required dependency to target_link_libraries(my_target PRIVATE LibName).",
+                "3. If including a C header from C++, wrap the include in: extern \"C\" { #include \"header.h\" }",
+                "4. Clean your build directory and reconfigure: rm -rf build && cmake -B build && cmake --build build",
+            ]
+            suggested_solution = (
+                "# Example fix in CMakeLists.txt:\n"
+                "add_executable(myapp main.cpp service.cpp utils.cpp)\n"
+                "find_package(OpenSSL REQUIRED)\n"
+                "target_link_libraries(myapp PRIVATE OpenSSL::SSL OpenSSL::Crypto)"
+            )
+            verification_steps = [
+                "Re-run 'cmake --build build' and confirm 100% build completion without linker errors.",
+                "Run the resulting executable to verify startup.",
+            ]
+        elif is_missing_flask and (is_docker or detected_type == "Deployment"):
             category = "Dependency Error"
             severity = "High"
             summary = "ModuleNotFoundError: No module named 'flask' in Docker container"

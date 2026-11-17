@@ -310,6 +310,11 @@ class HistoryScreen(QWidget):
 
         action_bar.addStretch()
 
+        self.import_btn = QPushButton("📥 Import Session...")
+        self.import_btn.setProperty("class", "secondaryBtn")
+        self.import_btn.clicked.connect(self._on_import_session_clicked)
+        action_bar.addWidget(self.import_btn)
+
         self.export_selected_btn = QPushButton("💾 Export Report...")
         self.export_selected_btn.setProperty("class", "secondaryBtn")
         self.export_selected_btn.clicked.connect(self._on_export_selected_clicked)
@@ -470,8 +475,31 @@ class HistoryScreen(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Delete Failed", f"Could not delete session: {e}")
 
+    def _on_import_session_clicked(self) -> None:
+        """Import a previously exported troubleshooting session JSON file."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Troubleshooting Session JSON",
+            "",
+            "JSON Backup Files (*.json);;All Files (*.*)",
+        )
+        if not file_path:
+            return
+
+        try:
+            content = Path(file_path).read_text(encoding="utf-8")
+            new_id = self.db.import_session_json(content)
+            self.reload_history()
+            QMessageBox.information(
+                self,
+                "Import Successful",
+                f"Successfully imported session as record #{new_id}.",
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Import Failed", f"Could not import session:\n{e}")
+
     def _on_export_selected_clicked(self) -> None:
-        """Export selected record to markdown file."""
+        """Export selected record to markdown, HTML, or JSON."""
         session_id = self._get_selected_session_id()
         if session_id is None:
             QMessageBox.information(self, "No Selection", "Please select a row to export.")
@@ -481,21 +509,71 @@ class HistoryScreen(QWidget):
         if not session:
             return
 
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, selected_filter = QFileDialog.getSaveFileName(
             self,
             "Export Session Report",
-            f"troubleshooting_session_{session['id']}.md",
-            "Markdown Files (*.md);;Text Files (*.txt)",
+            f"troubleshooting_session_{session['id']}.html",
+            "HTML Document (*.html);;Markdown Files (*.md);;JSON Backup (*.json);;Text Files (*.txt)",
         )
         if not file_path:
             return
 
-        facts_md = "\n".join(f"- {f}" for f in session.get("confirmed_facts", []))
-        causes_md = "\n".join(f"- {c}" for c in session.get("possible_causes", []))
-        steps_md = "\n".join(f"{i}. {step}" for i, step in enumerate(session.get("troubleshooting_steps", []), 1))
-        vsteps_md = "\n".join(f"{i}. {v}" for i, v in enumerate(session.get("verification_steps", []), 1))
+        facts_list = session.get("confirmed_facts", [])
+        causes_list = session.get("possible_causes", [])
+        steps_list = session.get("troubleshooting_steps", [])
+        vsteps_list = session.get("verification_steps", [])
 
-        content = f"""# AI IT Troubleshooting Report - Session #{session['id']}
+        if file_path.endswith(".json") or "JSON" in selected_filter:
+            content = json.dumps(session, indent=2, ensure_ascii=False)
+        elif file_path.endswith(".html") or "HTML" in selected_filter:
+            facts_html = "".join(f"<li>{f}</li>" for f in facts_list)
+            causes_html = "".join(f"<li>{c}</li>" for c in causes_list)
+            steps_html = "".join(f"<li>{st}</li>" for st in steps_list)
+            vsteps_html = "".join(f"<li>{v}</li>" for v in vsteps_list)
+
+            content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Troubleshooting Report - #{session['id']}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 32px; }}
+  .container {{ max-width: 860px; margin: 0 auto; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 32px; }}
+  h1 {{ color: #0f172a; margin-top: 0; font-size: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 12px; }}
+  h2 {{ color: #1e293b; font-size: 16px; margin-top: 24px; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }}
+  .badge {{ display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 6px; background: #e0e7ff; color: #3730a3; }}
+  pre {{ background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; overflow-x: auto; font-family: Consolas, monospace; font-size: 12px; }}
+  ol, ul {{ line-height: 1.6; color: #334155; }}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI IT Troubleshooting Report - Session #{session['id']}</h1>
+  <div>
+    <span class="badge">{session.get('programming_language', '')}</span>
+    <span class="badge">{session.get('problem_type', '')}</span>
+    <span class="badge">{session.get('error_category', '')}</span>
+    <span class="badge">Severity: {session.get('severity', '')}</span>
+    <span class="badge">Status: {session.get('resolution_status', '')}</span>
+  </div>
+  <h2>Error Summary</h2><p><strong>{session.get('error_summary', '')}</strong></p>
+  <h2>Explanation</h2><p>{session.get('error_explanation', '')}</p>
+  <h2>Confirmed Facts</h2><ul>{facts_html}</ul>
+  <h2>Possible Causes</h2><ul>{causes_html}</ul>
+  <h2>Troubleshooting Steps</h2><ol>{steps_html}</ol>
+  <h2>Suggested Solution</h2><pre><code>{session.get('suggested_solution', '')}</code></pre>
+  <h2>Verification Steps</h2><ol>{vsteps_html}</ol>
+  <h2>Original Redacted Log</h2><pre><code>{session.get('original_error_log', '')}</code></pre>
+</div>
+</body>
+</html>"""
+        else:
+            facts_md = "\n".join(f"- {f}" for f in facts_list)
+            causes_md = "\n".join(f"- {c}" for c in causes_list)
+            steps_md = "\n".join(f"{i}. {step}" for i, step in enumerate(steps_list, 1))
+            vsteps_md = "\n".join(f"{i}. {v}" for i, v in enumerate(vsteps_list, 1))
+
+            content = f"""# AI IT Troubleshooting Report - Session #{session['id']}
 
 - **Date / Time:** {session.get('timestamp', '')}
 - **Language:** {session.get('programming_language', '')}

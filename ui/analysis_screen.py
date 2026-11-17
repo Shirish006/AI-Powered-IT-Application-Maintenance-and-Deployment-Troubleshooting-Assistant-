@@ -61,9 +61,9 @@ class AnalysisScreen(QWidget):
 
         top_bar.addStretch()
 
-        self.export_btn = QPushButton("💾 Export Markdown")
+        self.export_btn = QPushButton("💾 Export Report...")
         self.export_btn.setProperty("class", "secondaryBtn")
-        self.export_btn.clicked.connect(self._export_to_markdown)
+        self.export_btn.clicked.connect(self._export_report)
         top_bar.addWidget(self.export_btn)
 
         self.try_again_btn = QPushButton("🔄 Edit & Try Again")
@@ -389,27 +389,100 @@ class AnalysisScreen(QWidget):
         }
         self.try_again_requested.emit(payload)
 
-    def _export_to_markdown(self) -> None:
-        """Export the current troubleshooting session as a clean Markdown report."""
+    def _export_report(self) -> None:
+        """Export the current troubleshooting session as Markdown, HTML, or JSON."""
         if not self.current_session:
             return
 
         s = self.current_session
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, selected_filter = QFileDialog.getSaveFileName(
             self,
             "Export Troubleshooting Report",
-            f"troubleshooting_session_{s['id']}.md",
-            "Markdown Files (*.md);;Text Files (*.txt)",
+            f"troubleshooting_session_{s['id']}.html",
+            "HTML Document (*.html);;Markdown Files (*.md);;JSON Backup (*.json);;Text Files (*.txt)",
         )
         if not file_path:
             return
 
-        facts_md = "\n".join(f"- {f}" for f in s.get("confirmed_facts", []))
-        causes_md = "\n".join(f"- {c}" for f in s.get("possible_causes", []) for c in [f])
-        steps_md = "\n".join(f"{i}. {step}" for i, step in enumerate(s.get("troubleshooting_steps", []), 1))
-        vsteps_md = "\n".join(f"{i}. {v}" for i, v in enumerate(s.get("verification_steps", []), 1))
+        facts_list = s.get("confirmed_facts", [])
+        causes_list = s.get("possible_causes", [])
+        steps_list = s.get("troubleshooting_steps", [])
+        vsteps_list = s.get("verification_steps", [])
 
-        content = f"""# AI IT Troubleshooting Report - Session #{s['id']}
+        if file_path.endswith(".json") or "JSON" in selected_filter:
+            content = json.dumps(s, indent=2, ensure_ascii=False)
+        elif file_path.endswith(".html") or "HTML" in selected_filter:
+            facts_html = "".join(f"<li>{f}</li>" for f in facts_list)
+            causes_html = "".join(f"<li>{c}</li>" for c in causes_list)
+            steps_html = "".join(f"<li>{st}</li>" for st in steps_list)
+            vsteps_html = "".join(f"<li>{v}</li>" for v in vsteps_list)
+
+            content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Troubleshooting Report - #{s['id']}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 32px; }}
+  .container {{ max-width: 860px; margin: 0 auto; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 32px; }}
+  h1 {{ color: #0f172a; margin-top: 0; font-size: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 12px; }}
+  h2 {{ color: #1e293b; font-size: 16px; margin-top: 24px; margin-bottom: 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; }}
+  .badge {{ display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 6px; background: #e0e7ff; color: #3730a3; }}
+  .badge-high {{ background: #ffedd5; color: #9a3412; }}
+  .badge-solved {{ background: #dcfce7; color: #166534; }}
+  pre {{ background: #0f172a; color: #f8fafc; padding: 14px; border-radius: 6px; overflow-x: auto; font-family: Consolas, monospace; font-size: 12px; }}
+  ol, ul {{ line-height: 1.6; color: #334155; }}
+  .disclaimer {{ background: #fffbeb; border: 1px solid #fde68a; padding: 10px 14px; border-radius: 6px; color: #92400e; font-size: 12px; margin-top: 24px; }}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI IT Troubleshooting Report - Session #{s['id']}</h1>
+  <div>
+    <span class="badge">{s.get('programming_language', '')}</span>
+    <span class="badge">{s.get('problem_type', '')}</span>
+    <span class="badge">{s.get('error_category', '')}</span>
+    <span class="badge badge-high">Severity: {s.get('severity', '')}</span>
+    <span class="badge badge-solved">Status: {s.get('resolution_status', '')}</span>
+  </div>
+
+  <h2>1. Error Summary</h2>
+  <p><strong>{s.get('error_summary', '')}</strong></p>
+
+  <h2>2. Explanation</h2>
+  <p>{s.get('error_explanation', '')}</p>
+
+  <h2>3. Confirmed Facts (From Logs)</h2>
+  <ul>{facts_html}</ul>
+
+  <h2>4. Possible Causes (Hypotheses)</h2>
+  <ul>{causes_html}</ul>
+
+  <h2>5. Troubleshooting Steps</h2>
+  <ol>{steps_html}</ol>
+
+  <h2>6. Suggested Solution</h2>
+  <pre><code>{s.get('suggested_solution', '')}</code></pre>
+
+  <h2>7. Verification Steps</h2>
+  <ol>{vsteps_html}</ol>
+
+  <h2>Original Redacted Log</h2>
+  <pre><code>{s.get('original_error_log', '')}</code></pre>
+
+  <div class="disclaimer">
+    ⚠️ <strong>Notice:</strong> AI suggestions are recommendations for human review. This system never applies changes automatically.
+  </div>
+</div>
+</body>
+</html>"""
+        else:
+            facts_md = "\n".join(f"- {f}" for f in facts_list)
+            causes_md = "\n".join(f"- {c}" for c in causes_list)
+            steps_md = "\n".join(f"{i}. {step}" for i, step in enumerate(steps_list, 1))
+            vsteps_md = "\n".join(f"{i}. {v}" for i, v in enumerate(vsteps_list, 1))
+
+            content = f"""# AI IT Troubleshooting Report - Session #{s['id']}
 
 - **Date / Time:** {s.get('timestamp', '')}
 - **Language:** {s.get('programming_language', '')}

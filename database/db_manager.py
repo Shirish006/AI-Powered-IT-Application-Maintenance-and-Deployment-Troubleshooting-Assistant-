@@ -289,3 +289,19 @@ class DBManager:
                 "in_progress": row["in_progress"] or 0,
                 "solved": row["solved"] or 0,
             }
+
+    def export_session_json(self, session_id: int) -> str:
+        """Export a session as a formatted JSON string for backup and sharing."""
+        session = self.get_session(session_id)
+        if not session:
+            raise ValueError(f"Session #{session_id} not found.")
+        return json.dumps(session, indent=2, ensure_ascii=False)
+
+    def import_session_json(self, json_str: str) -> int:
+        """Import a session from an exported JSON string. Returns new session ID."""
+        data = json.loads(json_str)
+        if not isinstance(data, dict):
+            raise ValueError("Invalid JSON data: expected an object.")
+        # Remove primary key so a new auto-increment ID is assigned
+        data.pop("id", None)
+        return self.insert_session(data)

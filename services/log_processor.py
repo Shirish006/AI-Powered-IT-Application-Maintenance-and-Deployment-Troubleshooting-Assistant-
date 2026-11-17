@@ -296,6 +296,24 @@ class LogProcessor:
             for exc_type, msg in js_exceptions[-3:]:
                 signals["exceptions"].append(f"{exc_type}: {msg.strip()[:80]}")
 
+        # C / C++ exception & compiler patterns: Segmentation fault, undefined reference, fatal error, CMake Error
+        if (
+            re.search(r"\b(Segmentation fault|SIGSEGV|SIGABRT|double free)\b", text, re.IGNORECASE)
+            or re.search(r"\b(undefined reference to|fatal error: .* No such file|CMake Error)\b", text)
+            or re.search(r"\.(?:c|cpp|cc|cxx|hpp|h):\d+:\d+:\s*(?:error|fatal error)", text)
+        ):
+            if ".cpp" in text or ".hpp" in text or "g++" in text or "clang++" in text or "std::" in text:
+                signals["language_hints"].append("C++")
+            else:
+                signals["language_hints"].append("C")
+
+            if "Segmentation fault" in text or "SIGSEGV" in text:
+                signals["exceptions"].append("SIGSEGV: Segmentation fault (core dumped)")
+            elif "undefined reference" in text:
+                signals["exceptions"].append("Linker Error: Undefined reference to symbol")
+            elif "CMake Error" in text:
+                signals["exceptions"].append("CMake Error: Configuration / build generation failure")
+
         # Deduplicate signals
         signals["language_hints"] = list(dict.fromkeys(signals["language_hints"]))
         signals["exceptions"] = list(dict.fromkeys(signals["exceptions"]))
