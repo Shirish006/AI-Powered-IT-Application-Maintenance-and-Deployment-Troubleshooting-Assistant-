@@ -79,7 +79,7 @@ def test_secret_redaction_api_keys():
         "OpenAI key: sk-abcdefghijklmnopqrstuvwxyz123456\n"
         "Google key: AIzaSyD1234567890abcdefghijklmnopqrstuv\n"
         "GitHub token: ghp_1234567890abcdefghijklmnopqrstuvwxyzAB\n"
-        "Slack: xoxb-1234567890-1234567890-abcdefghijklmnop\n"
+        "Slack: xoxb-TESTINGTOKENREDACTION1234567890\n"
     )
     res = LogProcessor.redact_secrets(text)
     assert res.redaction_count >= 4
