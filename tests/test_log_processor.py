@@ -76,7 +76,7 @@ def test_normalize_text():
 def test_secret_redaction_api_keys():
     """Verify API keys from common providers are redacted."""
     text = (
-        "OpenAI key: sk-abcdefghijklmnopqrstuvwxyz123456\n"
+        "API key: sk-abcdefghijklmnopqrstuvwxyz123456\n"
         "Google key: AIzaSyD1234567890abcdefghijklmnopqrstuv\n"
         "GitHub token: ghp_1234567890abcdefghijklmnopqrstuvwxyzAB\n"
         "Slack: xoxb-TESTINGTOKENREDACTION1234567890\n"

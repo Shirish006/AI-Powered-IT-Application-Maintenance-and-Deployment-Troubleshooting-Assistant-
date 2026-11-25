@@ -62,11 +62,9 @@ load_dotenv()  # fallback to standard cwd .env
 class AppConfig:
     """Global configuration settings for the application."""
 
-    ai_provider: str = "gemini"  # "gemini", "openai", "demo"
+    ai_provider: str = "gemini"  # "gemini" or "demo"
     gemini_api_key: str = ""
-    openai_api_key: str = ""
     gemini_model: str = "gemini-3.8-flash"
-    openai_model: str = "gpt-4o-mini"
     ai_timeout_seconds: int = 60
     max_log_size_bytes: int = 1_048_576  # 1 MB
     max_log_chars_for_ai: int = 16_000
@@ -81,13 +79,11 @@ class AppConfig:
 
         # 1. Environment variables
         env_provider = os.getenv("AI_PROVIDER", "").strip().lower()
-        if env_provider in ("gemini", "openai", "demo"):
+        if env_provider in ("gemini", "demo"):
             config.ai_provider = env_provider
 
         config.gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        config.openai_api_key = os.getenv("OPENAI_API_KEY", "").strip()
         config.gemini_model = os.getenv("GEMINI_MODEL", config.gemini_model).strip()
-        config.openai_model = os.getenv("OPENAI_MODEL", config.openai_model).strip()
 
         try:
             config.ai_timeout_seconds = int(os.getenv("AI_TIMEOUT_SECONDS", str(config.ai_timeout_seconds)))
@@ -114,16 +110,12 @@ class AppConfig:
             try:
                 with open(prefs_file, "r", encoding="utf-8") as f:
                     prefs: dict[str, Any] = json.load(f)
-                    if "ai_provider" in prefs:
+                    if "ai_provider" in prefs and prefs["ai_provider"] in ("gemini", "demo"):
                         config.ai_provider = prefs["ai_provider"]
                     if "gemini_api_key" in prefs and not config.gemini_api_key:
                         config.gemini_api_key = prefs["gemini_api_key"]
-                    if "openai_api_key" in prefs and not config.openai_api_key:
-                        config.openai_api_key = prefs["openai_api_key"]
                     if "gemini_model" in prefs:
                         config.gemini_model = prefs["gemini_model"]
-                    if "openai_model" in prefs:
-                        config.openai_model = prefs["openai_model"]
                     if "suppress_privacy_warning" in prefs:
                         config.suppress_privacy_warning = bool(prefs["suppress_privacy_warning"])
                     if "demo_mode_forced" in prefs:
@@ -139,9 +131,7 @@ class AppConfig:
         data = {
             "ai_provider": self.ai_provider,
             "gemini_api_key": self.gemini_api_key,
-            "openai_api_key": self.openai_api_key,
             "gemini_model": self.gemini_model,
-            "openai_model": self.openai_model,
             "suppress_privacy_warning": self.suppress_privacy_warning,
             "demo_mode_forced": self.demo_mode_forced,
         }
@@ -152,21 +142,17 @@ class AppConfig:
             pass
 
     def get_effective_provider(self) -> str:
-        """Return which provider will be used: 'gemini', 'openai', or 'demo'."""
+        """Return which provider will be used: 'gemini' or 'demo'."""
         if self.demo_mode_forced or self.ai_provider == "demo":
             return "demo"
         if self.ai_provider == "gemini":
             return "gemini" if self.gemini_api_key else "demo"
-        if self.ai_provider == "openai":
-            return "openai" if self.openai_api_key else "demo"
         return "demo"
 
     def has_valid_api_key(self) -> bool:
-        """Check if an API key is available for the active provider."""
+        """Check if an API key is available for Gemini."""
         if self.ai_provider == "gemini":
             return bool(self.gemini_api_key)
-        if self.ai_provider == "openai":
-            return bool(self.openai_api_key)
         return False
 
 

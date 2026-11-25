@@ -20,7 +20,6 @@ hiddenimports = [
     'dotenv',
     'platformdirs',
     'google.genai',
-    'openai',
 ]
 
 a = Analysis(

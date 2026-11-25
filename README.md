@@ -42,9 +42,8 @@
    - Stores only redacted logs in the local database.
 
 6. **Multi-Provider AI Abstraction & Built-In Demo Mode:**
-   - **Google Gemini:** High-speed, high-accuracy analysis powered by `gemini-2.5-flash` via the official `google-genai` SDK.
-   - **OpenAI:** Powered by `gpt-4o-mini` (or user-chosen model) via the `openai` SDK.
-   - **Demo Mode:** Fully offline, deterministic simulation mode tailored for college demonstrations, offline presentations, or testing when no API key is available.
+   - **Google Gemini:** High-speed, high-accuracy analysis powered by `gemini-3.8-flash` via the official `google-genai` SDK (Free tier).
+   - **Demo Mode:** Fully offline, deterministic simulation mode tailored for offline presentations, demonstrations, or testing with zero API calls.
 
 7. **Persistent History & Searchable Database:**
    - Built with SQLite using parameterized queries for complete injection protection.
@@ -104,7 +103,7 @@ AI_IT_Troubleshooting_Assistant/
 │
 ├── services/
 │   ├── __init__.py
-│   ├── ai_service.py           # AIProvider base class, Gemini/OpenAI implementations, DemoProvider
+│   ├── ai_service.py           # AIProvider base class, Gemini implementation, DemoProvider
 │   ├── cli_runner.py           # Headless CLI runner for terminal troubleshooting
 │   ├── error_classifier.py     # Canonical category and severity normalizer & heuristic fallback
 │   ├── log_processor.py        # File validation, normalization, secret redaction, truncation
@@ -192,10 +191,10 @@ All **44 automated tests** across 8 test suites will execute and pass in ~2 seco
 
 ## 🔑 AI Provider Configuration
 
-You can run the application with **Google Gemini**, **OpenAI**, or offline in **Demo Mode**.
+You can run the application with **Google Gemini** (Free) or offline in **Demo Mode**.
 
-### Option A: In-App Settings Dialog (Recommended)
-Launch the application and click **⚙️ API Settings** at the bottom of the left sidebar. Select your provider and paste your key. Your credentials will be saved locally in your user profile.
+### Option A: In-App Mode Selector (Recommended)
+Use the **Troubleshooting Mode** selector at the bottom-left of the sidebar to seamlessly toggle between **🟢 Online (Gemini AI)** and **⚡ Offline (Local Mode)**.
 
 ### Option B: `.env` File
 Create a `.env` file from `.env.example`:
@@ -204,16 +203,14 @@ Copy-Item .env.example .env
 ```
 Fill in your API key:
 ```env
-# Choose: gemini, openai, or demo
+# Choose: gemini or demo
 AI_PROVIDER=gemini
-GEMINI_API_KEY=AIzaSyYourGeminiApiKeyHere
-
-# Or for OpenAI:
-OPENAI_API_KEY=sk-proj-YourOpenAIApiKeyHere
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 ### Option C: Demo Mode (Offline / No Key Required)
-Select **Demo Mode** in the in-app Settings dialog or set `AI_PROVIDER=demo`. The assistant will generate rich, realistic, context-aware diagnostic demonstrations locally without making any external network requests.
+Select **Offline (Local Mode)** in the sidebar mode selector or set `AI_PROVIDER=demo`. The assistant will generate rich, realistic, context-aware diagnostic demonstrations locally without making any external network requests.
 
 ---
 

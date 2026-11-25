@@ -1,4 +1,4 @@
-"""AI Provider abstraction layer, implementations for Gemini and OpenAI, and DemoProvider."""
+"""AI Provider abstraction layer, implementation for Gemini, and DemoProvider."""
 
 from __future__ import annotations
 
@@ -16,7 +16,6 @@ from services.error_classifier import ErrorClassifier
 logger = logging.getLogger(__name__)
 
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
-DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_TIMEOUT_SECONDS = 60
 
 
@@ -407,58 +406,6 @@ class GeminiProvider(AIProvider):
         raise AIProviderError("Gemini analysis failed.")
 
 
-class OpenAIProvider(AIProvider):
-    """OpenAI implementation using openai SDK."""
-
-    def __init__(self, api_key: str, model_name: str = DEFAULT_OPENAI_MODEL, timeout: int = DEFAULT_TIMEOUT_SECONDS):
-        if not api_key:
-            raise MissingAPIKeyError("OpenAI API key is missing. Set OPENAI_API_KEY in .env or the Settings dialog.")
-        self.api_key = api_key
-        self.model_name = model_name
-        self.timeout = timeout
-
-    def analyze(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Call OpenAI API requesting structured JSON output."""
-        try:
-            import openai
-        except ImportError:
-            raise AIProviderError("openai library is not installed.")
-
-        user_prompt = build_user_prompt(
-            language=payload.get("programming_language") or payload.get("language", "Python"),
-            problem_type=payload.get("problem_type", "Automatic Detection"),
-            environment=payload.get("environment", "Development"),
-            framework=payload.get("application_framework") or payload.get("framework", ""),
-            redacted_log=payload.get("error_log", ""),
-            signals=payload.get("extracted_signals") or payload.get("signals", {}),
-        )
-
-        try:
-            client = openai.OpenAI(api_key=self.api_key, timeout=self.timeout)
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2,
-            )
-
-            raw_text = response.choices[0].message.content or ""
-            return AIService.parse_and_validate_json(raw_text, payload, provider="openai", model=self.model_name)
-
-        except Exception as e:
-            error_msg = str(e)
-            if "authentication" in error_msg.lower() or "invalid_api_key" in error_msg.lower() or "401" in error_msg:
-                raise AuthenticationError(f"Invalid OpenAI API key: {error_msg}")
-            if "rate_limit" in error_msg.lower() or "429" in error_msg or "quota" in error_msg.lower():
-                raise RateLimitError(f"OpenAI rate limit or quota exceeded: {error_msg}")
-            if "timeout" in error_msg.lower():
-                raise NetworkTimeoutError(f"OpenAI request timed out: {error_msg}")
-            raise AIProviderError(f"OpenAI API Error: {error_msg}")
-
-
 class AIService:
     """Orchestrates AI troubleshooting requests, JSON parsing, validation, and fallbacks."""
 
@@ -477,15 +424,6 @@ class AIService:
             return GeminiProvider(
                 api_key=cfg.gemini_api_key,
                 model_name=cfg.gemini_model,
-                timeout=cfg.ai_timeout_seconds,
-            )
-
-        if effective == "openai":
-            if not cfg.openai_api_key:
-                raise MissingAPIKeyError("OpenAI API key is not configured.")
-            return OpenAIProvider(
-                api_key=cfg.openai_api_key,
-                model_name=cfg.openai_model,
                 timeout=cfg.ai_timeout_seconds,
             )
 
@@ -665,14 +603,5 @@ class AIService:
                 if "RESOURCE_EXHAUSTED" in err or "429" in err:
                     return False, "Rate limit reached for this key. Please wait a moment and try again."
                 return False, f"Gemini connection failed: {err}"
-
-        elif provider == "openai":
-            try:
-                import openai
-                client = openai.OpenAI(api_key=key, timeout=10)
-                client.models.list()
-                return True, "Connection successful! OpenAI API responded properly."
-            except Exception as e:
-                return False, f"OpenAI connection failed: {e}"
 
         return False, f"Unsupported provider: {provider}"
