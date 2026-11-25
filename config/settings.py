@@ -65,7 +65,7 @@ class AppConfig:
     ai_provider: str = "gemini"  # "gemini", "openai", "demo"
     gemini_api_key: str = ""
     openai_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
     openai_model: str = "gpt-4o-mini"
     ai_timeout_seconds: int = 60
     max_log_size_bytes: int = 1_048_576  # 1 MB

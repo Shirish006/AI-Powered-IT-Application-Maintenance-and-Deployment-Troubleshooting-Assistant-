@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -26,6 +27,7 @@ from PySide6.QtWidgets import (
 
 from config.settings import WINDOW_TITLE, settings
 from database.db_manager import DBManager
+from services.ai_service import AIService
 from ui.analysis_screen import AnalysisScreen
 from ui.dashboard import DashboardScreen
 from ui.history_screen import HistoryScreen
@@ -34,102 +36,44 @@ from ui.widgets import get_app_icon
 
 
 class SettingsDialog(QDialog):
-    """Configuration dialog for setting AI provider, API keys, and models."""
+    """Configuration dialog for switching between Online (Gemini AI) and Offline mode."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("AI Provider & API Settings")
-        self.setMinimumWidth(500)
+        self.setWindowTitle("Operation Mode")
+        self.setMinimumWidth(440)
         self.setModal(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
-        title = QLabel("AI Configuration")
+        title = QLabel("Troubleshooting Mode")
         title.setFont(QFont("Segoe UI", 14, QFont.Weight.Bold))
         layout.addWidget(title)
 
         desc = QLabel(
-            "Configure which AI provider handles error troubleshooting, or enable offline Demo Mode.\n"
-            "Keys are stored in your secure local user profile and are never transmitted to third parties."
+            "Select how you want the troubleshooting engine to operate.\n"
+            "Online mode uses Google Gemini AI (Free). Offline mode runs 100% locally on your machine."
         )
         desc.setStyleSheet("color: #64748b; font-size: 12px;")
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
-        # Provider Selector
-        p_layout = QHBoxLayout()
-        p_lbl = QLabel("Active AI Provider:")
-        p_lbl.setStyleSheet("font-weight: 600;")
-        self.provider_combo = QComboBox()
-        self.provider_combo.addItems(["Gemini (Google AI)", "OpenAI (GPT-4o)", "Demo Mode (Offline)"])
+        # Mode Selection
+        self.radio_online = QRadioButton("🟢 Online Mode (Google Gemini AI - Free)")
+        self.radio_online.setStyleSheet("font-size: 13px; font-weight: 600; padding: 6px 0;")
+        self.radio_offline = QRadioButton("⚡ Offline Mode (Local Diagnostic Engine)")
+        self.radio_offline.setStyleSheet("font-size: 13px; font-weight: 600; padding: 6px 0;")
 
-        # Set initial combo index
-        if settings.demo_mode_forced or settings.ai_provider == "demo":
-            self.provider_combo.setCurrentIndex(2)
-        elif settings.ai_provider == "openai":
-            self.provider_combo.setCurrentIndex(1)
+        is_offline = settings.demo_mode_forced or settings.ai_provider == "demo"
+        if is_offline:
+            self.radio_offline.setChecked(True)
         else:
-            self.provider_combo.setCurrentIndex(0)
+            self.radio_online.setChecked(True)
 
-        self.provider_combo.currentIndexChanged.connect(self._on_provider_changed)
-        p_layout.addWidget(p_lbl)
-        p_layout.addWidget(self.provider_combo)
-        layout.addLayout(p_layout)
-
-        # Gemini Section
-        self.gemini_group = QFrame()
-        self.gemini_group.setStyleSheet("background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px;")
-        g_layout = QVBoxLayout(self.gemini_group)
-        g_layout.setSpacing(8)
-
-        g_title = QLabel("Google Gemini Configuration")
-        g_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        g_layout.addWidget(g_title)
-
-        g_key_lbl = QLabel("Gemini API Key:")
-        self.input_gemini_key = QLineEdit(settings.gemini_api_key)
-        self.input_gemini_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.input_gemini_key.setPlaceholderText("AIzaSy...")
-
-        g_model_lbl = QLabel("Model Name:")
-        self.input_gemini_model = QLineEdit(settings.gemini_model)
-
-        g_layout.addWidget(g_key_lbl)
-        g_layout.addWidget(self.input_gemini_key)
-        g_layout.addWidget(g_model_lbl)
-        g_layout.addWidget(self.input_gemini_model)
-        layout.addWidget(self.gemini_group)
-
-        # OpenAI Section
-        self.openai_group = QFrame()
-        self.openai_group.setStyleSheet("background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px;")
-        o_layout = QVBoxLayout(self.openai_group)
-        o_layout.setSpacing(8)
-
-        o_title = QLabel("OpenAI Configuration")
-        o_title.setFont(QFont("Segoe UI", 11, QFont.Weight.Bold))
-        o_layout.addWidget(o_title)
-
-        o_key_lbl = QLabel("OpenAI API Key:")
-        self.input_openai_key = QLineEdit(settings.openai_api_key)
-        self.input_openai_key.setEchoMode(QLineEdit.EchoMode.Password)
-        self.input_openai_key.setPlaceholderText("sk-proj-...")
-
-        o_model_lbl = QLabel("Model Name:")
-        self.input_openai_model = QLineEdit(settings.openai_model)
-
-        o_layout.addWidget(o_key_lbl)
-        o_layout.addWidget(self.input_openai_key)
-        o_layout.addWidget(o_model_lbl)
-        o_layout.addWidget(self.input_openai_model)
-        layout.addWidget(self.openai_group)
-
-        # Show/Hide passwords toggle
-        self.show_keys_cb = QCheckBox("Show API key characters")
-        self.show_keys_cb.toggled.connect(self._toggle_password_visibility)
-        layout.addWidget(self.show_keys_cb)
+        layout.addWidget(self.radio_online)
+        layout.addWidget(self.radio_offline)
 
         # Reset Privacy Notice Checkbox
         self.reset_privacy_cb = QCheckBox("Reset privacy notice (show confirmation on next external AI request)")
@@ -144,44 +88,16 @@ class SettingsDialog(QDialog):
         btn_box.rejected.connect(self.reject)
         layout.addWidget(btn_box)
 
-        self._on_provider_changed(self.provider_combo.currentIndex())
-
-    def _toggle_password_visibility(self, checked: bool) -> None:
-        mode = QLineEdit.EchoMode.Normal if checked else QLineEdit.EchoMode.Password
-        self.input_gemini_key.setEchoMode(mode)
-        self.input_openai_key.setEchoMode(mode)
-
-    def _on_provider_changed(self, index: int) -> None:
-        """Toggle active provider box."""
-        if index == 0:  # Gemini
-            self.gemini_group.show()
-            self.openai_group.hide()
-        elif index == 1:  # OpenAI
-            self.gemini_group.hide()
-            self.openai_group.show()
-        else:  # Demo
-            self.gemini_group.hide()
-            self.openai_group.hide()
-
     def _save_settings(self) -> None:
-        """Persist settings to memory and file."""
-        idx = self.provider_combo.currentIndex()
-        if idx == 0:
+        """Persist mode settings."""
+        if self.radio_online.isChecked():
             settings.ai_provider = "gemini"
-            settings.demo_mode_forced = False
-        elif idx == 1:
-            settings.ai_provider = "openai"
             settings.demo_mode_forced = False
         else:
             settings.ai_provider = "demo"
             settings.demo_mode_forced = True
 
-        settings.gemini_api_key = self.input_gemini_key.text().strip()
-        settings.gemini_model = self.input_gemini_model.text().strip() or "gemini-2.5-flash"
-        settings.openai_api_key = self.input_openai_key.text().strip()
-        settings.openai_model = self.input_openai_model.text().strip() or "gpt-4o-mini"
         settings.suppress_privacy_warning = not self.reset_privacy_cb.isChecked()
-
         settings.save_preferences()
         self.accept()
 
@@ -292,27 +208,58 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()
 
-        # Bottom Provider Status Indicator
-        self.status_card = QFrame()
-        self.status_card.setObjectName("sidebarStatusCard")
-        s_layout = QVBoxLayout(self.status_card)
-        s_layout.setContentsMargins(10, 8, 10, 8)
-        s_layout.setSpacing(3)
+        # Bottom Mode Selector (Offline vs Online)
+        self.mode_card = QFrame()
+        self.mode_card.setObjectName("sidebarStatusCard")
+        m_layout = QVBoxLayout(self.mode_card)
+        m_layout.setContentsMargins(10, 10, 10, 10)
+        m_layout.setSpacing(6)
 
-        s_title = QLabel("AI ENGINE")
-        s_title.setObjectName("sidebarStatusLabel")
-        self.lbl_provider_status = QLabel("Gemini: Ready")
+        m_title = QLabel("TROUBLESHOOTING MODE")
+        m_title.setObjectName("sidebarStatusLabel")
+        m_layout.addWidget(m_title)
+
+        self.mode_combo = QComboBox()
+        self.mode_combo.setObjectName("sidebarModeCombo")
+        self.mode_combo.addItems(["🟢 Online (Gemini AI)", "⚡ Offline (Local Mode)"])
+        self.mode_combo.setStyleSheet("""
+            QComboBox#sidebarModeCombo {
+                background-color: #0f172a;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 12px;
+                font-weight: 500;
+            }
+            QComboBox#sidebarModeCombo:hover {
+                border-color: #38bdf8;
+            }
+            QComboBox#sidebarModeCombo::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox#sidebarModeCombo QAbstractItemView {
+                background-color: #1e293b;
+                color: #f8fafc;
+                selection-background-color: #2563eb;
+                selection-color: #ffffff;
+                border: 1px solid #334155;
+                outline: none;
+            }
+        """)
+
+        is_offline = settings.demo_mode_forced or settings.ai_provider == "demo"
+        self.mode_combo.setCurrentIndex(1 if is_offline else 0)
+        self.mode_combo.currentIndexChanged.connect(self._on_sidebar_mode_changed)
+        m_layout.addWidget(self.mode_combo)
+
+        self.lbl_provider_status = QLabel("Gemini: Active (Free)" if not is_offline else "Offline Mode (Local)")
         self.lbl_provider_status.setObjectName("sidebarStatusValue")
-        s_layout.addWidget(s_title)
-        s_layout.addWidget(self.lbl_provider_status)
-        layout.addWidget(self.status_card)
+        self.lbl_provider_status.setStyleSheet("color: #10b981;" if not is_offline else "color: #a855f7;")
+        m_layout.addWidget(self.lbl_provider_status)
 
-        # Settings button
-        self.settings_btn = QPushButton("⚙️ API Settings")
-        self.settings_btn.setProperty("class", "sidebarNavBtn")
-        self.settings_btn.setIcon(get_app_icon("settings.svg"))
-        self.settings_btn.clicked.connect(self._open_settings_dialog)
-        layout.addWidget(self.settings_btn)
+        layout.addWidget(self.mode_card)
 
         return sidebar_frame
 
@@ -378,26 +325,34 @@ class MainWindow(QMainWindow):
         )
         self.switch_screen(1)
 
-    def _update_sidebar_status(self) -> None:
-        """Refresh the sidebar status card according to active provider and key state."""
-        effective = settings.get_effective_provider()
-        if effective == "demo":
-            self.lbl_provider_status.setText("Demo Mode (Offline)")
+    def _on_sidebar_mode_changed(self, index: int) -> None:
+        """Handle user changing the mode dropdown in the sidebar."""
+        if index == 0:  # Online
+            settings.ai_provider = "gemini"
+            settings.demo_mode_forced = False
+            self.lbl_provider_status.setText("Gemini: Active (Free)")
+            self.lbl_provider_status.setStyleSheet("color: #10b981;")
+        else:  # Offline
+            settings.ai_provider = "demo"
+            settings.demo_mode_forced = True
+            self.lbl_provider_status.setText("Offline Mode (Local)")
             self.lbl_provider_status.setStyleSheet("color: #a855f7;")
-        elif effective == "gemini":
-            if settings.gemini_api_key:
-                self.lbl_provider_status.setText("Gemini (Active)")
-                self.lbl_provider_status.setStyleSheet("color: #10b981;")
+        settings.save_preferences()
+
+    def _update_sidebar_status(self) -> None:
+        """Refresh the sidebar status according to active provider."""
+        is_offline = settings.demo_mode_forced or settings.ai_provider == "demo"
+        if hasattr(self, "mode_combo"):
+            self.mode_combo.blockSignals(True)
+            self.mode_combo.setCurrentIndex(1 if is_offline else 0)
+            self.mode_combo.blockSignals(False)
+        if hasattr(self, "lbl_provider_status"):
+            if is_offline:
+                self.lbl_provider_status.setText("Offline Mode (Local)")
+                self.lbl_provider_status.setStyleSheet("color: #a855f7;")
             else:
-                self.lbl_provider_status.setText("Gemini (Key Missing)")
-                self.lbl_provider_status.setStyleSheet("color: #f59e0b;")
-        elif effective == "openai":
-            if settings.openai_api_key:
-                self.lbl_provider_status.setText("OpenAI (Active)")
+                self.lbl_provider_status.setText("Gemini: Active (Free)")
                 self.lbl_provider_status.setStyleSheet("color: #10b981;")
-            else:
-                self.lbl_provider_status.setText("OpenAI (Key Missing)")
-                self.lbl_provider_status.setStyleSheet("color: #f59e0b;")
 
     def _open_settings_dialog(self) -> None:
         """Show settings dialog and update sidebar status on close."""

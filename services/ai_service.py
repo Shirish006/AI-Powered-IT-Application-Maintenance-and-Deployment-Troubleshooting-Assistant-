@@ -15,7 +15,7 @@ from services.error_classifier import ErrorClassifier
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 DEFAULT_TIMEOUT_SECONDS = 60
 
@@ -304,7 +304,7 @@ class GeminiProvider(AIProvider):
         self.timeout = timeout
 
     def analyze(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Call Gemini API requesting structured JSON output."""
+        """Call Gemini API requesting structured JSON output with automatic model fallback."""
         try:
             from google import genai
             from google.genai import types
@@ -320,31 +320,91 @@ class GeminiProvider(AIProvider):
             signals=payload.get("extracted_signals") or payload.get("signals", {}),
         )
 
+        # Build prioritized list of models to try
+        candidates = []
+        clean_model = (self.model_name or "").strip()
+        if clean_model:
+            candidates.append(clean_model)
+        candidates.extend([
+            "gemini-3.8-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.7-flash",
+            "gemini-3.5-flash",
+            "gemma-4-26b-a4b-it",
+            "gemini-2.5-flash",
+        ])
+        # Deduplicate while preserving order
+        models_to_try = list(dict.fromkeys(candidates))
+
         try:
-            client = genai.Client(api_key=self.api_key)
-            config = types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                temperature=0.2,
-            )
-            response = client.models.generate_content(
-                model=self.model_name,
-                contents=user_prompt,
-                config=config,
-            )
-
-            raw_text = response.text or ""
-            return AIService.parse_and_validate_json(raw_text, payload, provider="gemini", model=self.model_name)
-
+            client = genai.Client(api_key=self.api_key, http_options={"api_version": "v1beta"})
         except Exception as e:
-            error_msg = str(e)
-            if "API_KEY_INVALID" in error_msg or "401" in error_msg or "authentication" in error_msg.lower():
-                raise AuthenticationError(f"Invalid Gemini API key: {error_msg}")
-            if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg or "quota" in error_msg.lower():
-                raise RateLimitError(f"Gemini API rate limit or quota exceeded: {error_msg}")
-            if "DEADLINE_EXCEEDED" in error_msg or "timeout" in error_msg.lower():
-                raise NetworkTimeoutError(f"Gemini API request timed out: {error_msg}")
-            raise AIProviderError(f"Gemini API Error: {error_msg}")
+            raise AuthenticationError(f"Failed to initialize Gemini Client: {e}")
+
+        config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_PROMPT,
+            response_mime_type="application/json",
+            temperature=0.2,
+        )
+
+        last_exception: Exception | None = None
+        for model in models_to_try:
+            try:
+                logger.info("Calling Gemini API with model: %s", model)
+                response = client.models.generate_content(
+                    model=model,
+                    contents=user_prompt,
+                    config=config,
+                )
+
+                raw_text = ""
+                if hasattr(response, "text") and response.text:
+                    raw_text = response.text
+                elif hasattr(response, "candidates") and response.candidates:
+                    for cand in response.candidates:
+                        if cand.content and cand.content.parts:
+                            for part in cand.content.parts:
+                                if hasattr(part, "text") and part.text:
+                                    raw_text += part.text
+
+                if not raw_text.strip():
+                    raise MalformedResponseError("Gemini returned an empty response.")
+
+                return AIService.parse_and_validate_json(raw_text, payload, provider="gemini", model=model)
+
+            except Exception as e:
+                error_msg = str(e)
+                last_exception = e
+
+                # If model is not found (404) or temporarily overloaded (503 / high demand), try the next candidate
+                if any(k in error_msg.lower() or k in type(e).__name__.lower() for k in ("404", "not found", "503", "unavailable", "high demand", "temporarily")):
+                    logger.warning("Gemini model '%s' unavailable (%s). Attempting fallback to next model...", model, error_msg)
+                    time.sleep(0.5)
+                    continue
+
+                # Authentication / Key errors
+                if "API_KEY_INVALID" in error_msg or "400" in error_msg or "401" in error_msg or "api key not valid" in error_msg.lower() or "authentication" in error_msg.lower():
+                    raise AuthenticationError(
+                        f"Invalid Gemini API key. Please verify your key at https://aistudio.google.com/app/apikey.\nDetails: {error_msg}"
+                    )
+
+                # Rate Limit / Quota
+                if "RESOURCE_EXHAUSTED" in error_msg or "429" in error_msg or "quota" in error_msg.lower():
+                    raise RateLimitError(
+                        f"Gemini API rate limit or quota exceeded. Free tier accounts have rate limits (15 RPM). Please wait a moment and retry.\nDetails: {error_msg}"
+                    )
+
+                # Network / Timeout
+                if "ConnectError" in type(e).__name__ or "getaddrinfo failed" in error_msg or "DEADLINE_EXCEEDED" in error_msg or "timeout" in error_msg.lower():
+                    raise NetworkTimeoutError(
+                        f"Network connection to Google Gemini API failed. Please check your internet connection.\nDetails: {error_msg}"
+                    )
+
+                raise AIProviderError(f"Gemini API Error: {error_msg}")
+
+        if last_exception:
+            raise AIProviderError(f"Gemini API Error across attempted models: {last_exception}")
+        raise AIProviderError("Gemini analysis failed.")
 
 
 class OpenAIProvider(AIProvider):
@@ -558,3 +618,61 @@ class AIService:
         if last_error:
             raise last_error
         raise AIProviderError("Analysis execution failed.")
+
+    @classmethod
+    def test_connection(cls, provider: str, api_key: str, model_name: str = "") -> tuple[bool, str]:
+        """Test API key and model connectivity for the chosen provider."""
+        provider = (provider or "").lower().strip()
+        key = (api_key or "").strip()
+
+        if provider == "demo":
+            return True, "Demo Mode is active. Works 100% offline without an external API."
+
+        if not key:
+            return False, f"API key for {provider.title()} is empty. Please enter your key."
+
+        if provider == "gemini":
+            try:
+                from google import genai
+                client = genai.Client(api_key=key, http_options={"api_version": "v1beta"})
+                target_model = model_name.strip() if model_name.strip() else "gemini-3.8-flash"
+                test_candidates = [target_model, "gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-3.5-flash", "gemma-4-26b-a4b-it"]
+                test_candidates = list(dict.fromkeys(test_candidates))
+
+                last_err = None
+                for candidate in test_candidates:
+                    try:
+                        response = client.models.generate_content(
+                            model=candidate,
+                            contents="Respond with the single word: OK",
+                        )
+                        return True, f"Connection successful! Model '{candidate}' responded properly."
+                    except Exception as model_err:
+                        err_str = str(model_err)
+                        last_err = model_err
+                        if any(k in err_str.lower() for k in ("404", "not found", "503", "unavailable", "high demand")):
+                            continue
+                        raise model_err
+                if last_err:
+                    raise last_err
+
+            except Exception as e:
+                err = str(e)
+                if "API_KEY_INVALID" in err or "400" in err or "api key not valid" in err.lower():
+                    return False, "Invalid API key. Check or create a key at https://aistudio.google.com/app/apikey"
+                if "ConnectError" in type(e).__name__ or "getaddrinfo failed" in err:
+                    return False, "Network error: Unable to connect to Google API servers. Check your internet connection."
+                if "RESOURCE_EXHAUSTED" in err or "429" in err:
+                    return False, "Rate limit reached for this key. Please wait a moment and try again."
+                return False, f"Gemini connection failed: {err}"
+
+        elif provider == "openai":
+            try:
+                import openai
+                client = openai.OpenAI(api_key=key, timeout=10)
+                client.models.list()
+                return True, "Connection successful! OpenAI API responded properly."
+            except Exception as e:
+                return False, f"OpenAI connection failed: {e}"
+
+        return False, f"Unsupported provider: {provider}"

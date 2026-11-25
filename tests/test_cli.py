@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from config.settings import settings
 from database.db_manager import DBManager
 from services.cli_runner import build_cli_parser, format_cli_output, run_cli
 
@@ -47,7 +48,8 @@ def test_format_cli_output():
     assert "1. Step 1" in output
 
 
-def test_run_cli_with_text(tmp_path: Path):
+def test_run_cli_with_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "demo_mode_forced", True)
     db_file = tmp_path / "test_cli.db"
     db = DBManager(db_file)
 
